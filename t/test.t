@@ -2,4 +2,4 @@ use Test::More tests => 1;
 
 # ------------------------
 
-BEGIN{ use_ok('Local::Config'); }
+BEGIN{ use_ok('HTML::Timeline'); }
