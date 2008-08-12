@@ -1,0 +1,4 @@
+Revision history for Perl extension HTML::Timeline.
+
+1.00  Mon Aug 11 17:56:00 2008
+	- Original version
