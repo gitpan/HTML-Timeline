@@ -13,10 +13,12 @@ require 5.005_62;
 
 require Exporter;
 
-use accessors::classic qw/ancestors everyone format gedcom_file gedobj include_spouses root_person verbose xml_file/;
+use accessors::classic qw/ancestors everyone format gedcom_file gedobj include_spouses output_dir root_person template_dir template_name timeline_height url_for_xml verbose web_page xml_file/;
 use Carp;
-use Date::Manip ();
 use Gedcom;
+use Gedcom::Date;
+use HTML::Template;
+use Path::Class;
 
 our @ISA = qw(Exporter);
 
@@ -37,7 +39,7 @@ our @EXPORT = qw(
 
 );
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 # -----------------------------------------------
 
@@ -59,9 +61,11 @@ sub generate_xml_file
 {
 	my($self, $people) = @_;
 
+	# Process each person.
+
 	my($birth_date);
 	my($death_date);
-	my($extracted_date);
+	my($earliest_date, $extracted_date);
 	my(@missing);
 	my($name, %notes);
 	my($person);
@@ -89,9 +93,18 @@ sub generate_xml_file
 
 		# Process birth dates.
 
-		if (Date::Manip::ParseDate($birth_date) )
+		if (Gedcom::Date::parse($birth_date) )
 		{
 			$notes{$name} = '';
+
+			if ($earliest_date && ($birth_date < $earliest_date) )
+			{
+				$earliest_date = $birth_date;
+			}
+			elsif (! $earliest_date)
+			{
+				$earliest_date = $birth_date;
+			}
 		}
 		elsif ($birth_date)
 		{
@@ -102,17 +115,30 @@ sub generate_xml_file
 			{
 				$birth_date = $extracted_date;
 			}
+
+			if ($earliest_date && ($birth_date < $earliest_date) )
+			{
+				$earliest_date = $birth_date;
+			}
+			elsif (! $earliest_date)
+			{
+				$earliest_date = $birth_date;
+			}
 		}
 		else
 		{
-			push @missing, $name;
+			push @missing,
+			{
+				death_date => $death_date,
+				name       => $name,
+			};
 
 			next;
 		}
 
 		# Process death dates.
 
-		if (Date::Manip::ParseDate($death_date) )
+		if (Gedcom::Date::parse($death_date) )
 		{
 			# James Riley Durbin's death date (FEB 1978) is parseable by ParseDate
 			# but not Similie Timeline, so we only extract the year.
@@ -147,21 +173,57 @@ sub generate_xml_file
 		}
 	}
 
-	if (@missing)
-	{
-		my($today)   = Date::Manip::UnixDate(Date::Manip::ParseDate('today'), '%b %e %Y');
-		my($message) = 'People excluded because of missing birth dates: ' . join(', ', @missing);
-
-		push @xml, qq|  <event title="Missing" start="$today">$message</event>|;
-	}
-
 	push @xml, '</data>';
 
-	open(OUT, '> ' . $self -> xml_file() ) || Carp::croak "Can't open(> " . $self -> xml_file() . "): $!";
+	# Write timeline.xml.
+
+	my($output_dir)       = $self -> output_dir();
+	my($output_file_name) = $self -> xml_file();
+
+	if ($output_dir)
+	{
+		$output_file_name = file($output_dir, $output_file_name);
+	}
+
+	open(OUT, "> $output_file_name") || Carp::croak "Can't open(> $output_file_name): $!";
 	print OUT join("\n", @xml), "\n";
 	close OUT;
 
-	$self -> log(sprintf($self -> format(), 'Created', $self -> xml_file() ) );
+	$self -> log(sprintf($self -> format(), 'Created', $output_file_name) );
+
+	# Write timeline.html.
+
+	my($template)     = HTML::Template -> new(filename => $self -> template_name(), path => $self -> template_dir() );
+	my($url_for_xml)  = $self -> url_for_xml();
+	$output_file_name = $self -> xml_file();
+
+	if ($url_for_xml)
+	{
+		$output_file_name = "$url_for_xml/$output_file_name"; # No Path::Class here.
+	}
+
+	$template -> param(earliest_date   => $earliest_date);
+	$template -> param(timeline_height => $self -> timeline_height() );
+	$template -> param(xml_file_name   => $output_file_name);
+
+	if (@missing)
+	{
+		$template -> param(missing      => 'People excluded because of missing birth dates:');
+		$template -> param(missing_loop => [map{ { death_date => $$_{'death_date'}, name => $$_{'name'} } } @missing]);
+	}
+
+	$output_file_name = $self -> web_page();
+
+	if ($output_dir)
+	{
+		$output_file_name = file($output_dir, $output_file_name);
+	}
+
+	open(OUT, "> $output_file_name") || Carp::croak "Can't open(> $output_file_name): $!";
+	print OUT $template -> output();
+	close OUT;
+
+	$self -> log(sprintf($self -> format(), 'Created', $output_file_name) );
 
 } # End of generate_xml_file.
 
@@ -208,7 +270,7 @@ sub new
 {
 	my($class, %arg)    = @_;
 	my($self)           = bless({}, $class);
-	my(@options)        = (qw/ancestors everyone gedcom_file include_spouses root_person verbose xml_file/);
+	my(@options)        = (qw/ancestors everyone gedcom_file include_spouses output_dir root_person template_dir template_name timeline_height url_for_xml verbose web_page xml_file/);
 
 	# Set defaults.
 
@@ -218,8 +280,14 @@ sub new
 	$self -> gedcom_file('bach.ged');
 	$self -> gedobj(''); # Not in the @options array!
 	$self -> include_spouses(0);
+	$self -> output_dir('');
 	$self -> root_person('Johann Sebastian Bach');
+	$self -> template_dir('.');
+	$self -> template_name('timeline.tmpl');
+	$self -> timeline_height(500);
+	$self -> url_for_xml('');
 	$self -> verbose(0);
+	$self -> web_page('timeline.html');
 	$self -> xml_file('timeline.xml');
 
 	# Process user options.
@@ -389,11 +457,33 @@ If this option is 0, spouses are ignored.
 
 The default is 0.
 
+=item output_dir a_dir_name
+
+If this option is used, the output HTML and XML files will be created in this directory.
+
 =item root_person
 
 The name of the person on which to base the timeline.
 
 The default is 'Johann Sebastian Bach'.
+
+=item template_dir a_dir_name
+
+If this option is used, HTML::Template will look in this directory for 'timeline.tmpl'.
+
+If this option is not used, the current directory will be used.
+
+=item template_name a_file_name
+
+If this option is used, HTML::Template will look for a file of this name.
+
+If this option is not used, 'timeline.tmpl' will be used.
+
+=item url_for_xml a_url
+
+If this option is used, it becomes the prefix of the name of the output XML file written into timeline.html.
+
+If this option is not used, no prefix is used.
 
 =item verbose
 
@@ -402,6 +492,14 @@ This takes either a 0 or a 1.
 Write more or less progress messages to STDERR.
 
 The default value is 0.
+
+=item web_page a_file_name
+
+If this option is used, it specfies the name of the HTML file to write.
+
+If this option is not used, 'timeline.html' is written.
+
+See the output_dir option for where the file is written.
 
 =item xml_file
 
@@ -436,11 +534,13 @@ Some of these are only used by C<bin/timeline.pl>.
 
 =item Carp
 
-=item Date::Manip
-
 =item Gedcom
 
+=item Gedcom::Date
+
 =item Getopt::Long
+
+=item Path::Class
 
 =item Pod::Usage
 

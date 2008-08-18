@@ -13,7 +13,7 @@ function onLoad() {
   var theme = Timeline.ClassicTheme.create();
   theme.event.bubble.width = 320;
   theme.event.bubble.height = 220;
-  var d = Timeline.DateTime.parseGregorianDateTime("1685")
+  var d = Timeline.DateTime.parseGregorianDateTime("<tmpl_var name=earliest_date>");
   var bandInfos = [
     Timeline.createBandInfo({
     width:          "100%", 
@@ -25,7 +25,7 @@ function onLoad() {
   })
   ];
   tl = Timeline.create(document.getElementById("my-timeline"), bandInfos);
-  Timeline.loadXML("timeline.xml", function(xml, url) { eventSource.loadXML(xml,
+  Timeline.loadXML("<tmpl_var name=xml_file_name>", function(xml, url) { eventSource.loadXML(xml,
   url); });
 }
 
@@ -42,6 +42,22 @@ var resizeTimerID = null;
 </head>
 <body onload="onLoad();" onresize="onResize();">
   <h1>Timeline</h1>
-  <div id="my-timeline" style="height: 900px; border: 1px solid #aaa"></div>
+  <div id="my-timeline" style="height: <tmpl_var name=timeline_height>px; border: 1px solid #aaa"></div>
+  <tmpl_if name=missing>
+  <p>
+	<tmpl_var name=missing>
+  </p>
+  <table>
+	<tr>
+	  <th>Name</th><td>Death date</td>
+	</tr>
+	<tmpl_loop name=missing_loop>
+	  <tr><th><tmpl_var name=name></th><td><tmpl_var name=death_date></td>
+	</tmpl_loop>
+  </table>
+  </tmpl_if>
+  <hr />
+  <p>Note: You should see 2 timescales at the bottom of the timeline. You can click-and-drag
+on each separately, for slow or quick movement through time.</p>
 </body>
 </html>

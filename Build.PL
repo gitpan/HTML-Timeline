@@ -13,9 +13,11 @@ Module::Build -> new
  },
  requires =>
  {
-	 accessors   => 0,
-	 Carp        => 0,
-	 Date::Manip => 0,
-	 Gedcom      => 0,
+	 accessors      => 0,
+	 Carp           => 0,
+	 Gedcom         => 0,
+	 Gedcom::Date   => 0,
+	 HTML::Template => 0,
+	 Path::Class    => 0,
  },
 ) -> create_build_script();
