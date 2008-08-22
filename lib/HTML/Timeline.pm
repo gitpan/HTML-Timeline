@@ -13,7 +13,26 @@ require 5.005_62;
 
 require Exporter;
 
-use accessors::classic qw/ancestors everyone format gedcom_file gedobj include_spouses output_dir root_person template_dir template_name timeline_height url_for_xml verbose web_page xml_file/;
+# Warning: This list must include format and gedobj, unlike the list in sub new(),
+# since those 2 special cases are attributes which are not available to the caller.
+
+use accessors::classic qw/
+ancestors
+everyone
+format
+gedcom_file
+gedobj
+include_spouses
+output_dir
+root_person
+template_dir
+template_name
+timeline_height
+url_for_xml
+verbose
+web_page
+xml_file
+/;
 use Carp;
 use Gedcom;
 use Gedcom::Date;
@@ -39,7 +58,7 @@ our @EXPORT = qw(
 
 );
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 # -----------------------------------------------
 
@@ -93,7 +112,7 @@ sub generate_xml_file
 
 		# Process birth dates.
 
-		if (Gedcom::Date::parse($birth_date) )
+		if (Gedcom::Date -> parse($birth_date) )
 		{
 			$notes{$name} = '';
 
@@ -239,10 +258,10 @@ sub get_spouses
 
 	for my $person (@$people)
 	{
-		if ($person -> spouse() )
-		{
-			$spouse = $person -> spouse();
+		$spouse = $person -> spouse();
 
+		if ($spouse)
+		{
 			push @$spouses, $spouse;
 		}
 	}
@@ -270,7 +289,23 @@ sub new
 {
 	my($class, %arg)    = @_;
 	my($self)           = bless({}, $class);
-	my(@options)        = (qw/ancestors everyone gedcom_file include_spouses output_dir root_person template_dir template_name timeline_height url_for_xml verbose web_page xml_file/);
+	# Warning: This list must not contain: format or gedobj,
+	# since these are attributes not available to the caller.
+	my(@options)        = (qw/
+ancestors
+everyone
+gedcom_file
+include_spouses
+output_dir
+root_person
+template_dir
+template_name
+timeline_height
+url_for_xml
+verbose
+web_page
+xml_file
+/);
 
 	# Set defaults.
 
@@ -289,6 +324,36 @@ sub new
 	$self -> verbose(0);
 	$self -> web_page('timeline.html');
 	$self -> xml_file('timeline.xml');
+
+	# Check ~/.timelinerc for more defaults.
+
+	my($resource_file_name) = "$ENV{'HOME'}/.timelinerc";
+
+	if (-e $resource_file_name)
+	{
+		require "Config/IniFiles.pm";
+
+		my($config)       = Config::IniFiles -> new(-file => $resource_file_name);
+		my($section_name) = 'HTML::Timeline';
+
+		if (! $config -> SectionExists($section_name) )
+		{
+			Carp::croak "Error: Section '$section_name' is missing from $resource_file_name";
+		}
+
+		my($option);
+		my($value);
+
+		for $option (@options)
+		{
+			$value = $config -> val($section_name, $option);
+
+			if (defined $value)
+			{
+				$self -> $option($value);
+			}
+		}
+	}
 
 	# Process user options.
 
@@ -366,7 +431,7 @@ sub run
 
 			if ($self -> include_spouses() == 1)
 			{
-				push @people, @{$self -> get_spouses(\@people)};
+				push @people, @{$self -> get_spouses([$root_person, @people])};
 			}
 		}
 		else
@@ -422,6 +487,9 @@ Usage: C<< HTML::Timeline -> new() >>.
 This method takes a hashref of options.
 
 Call C<new()> as C<< new({option_1 => value_1, option_2 => value_2, ...}) >>.
+
+See the next section for a discussion of the resource file $HOME/.timelinerc,
+which can be used to override the default values for options.
 
 Available options:
 
@@ -511,6 +579,34 @@ Note: The name of the XML file is embedded in timeline.html, at line 28.
 You will need to edit the latter file if you use a different name for your XML output file.
 
 =back
+
+=head1 The resource file $HOME/.timelinerc
+
+The program looks for a file called $HOME/.timelinerc during execution of the constructor.
+
+If this file is present, the module Config::IniFiles is loaded to process it.
+
+If the file is absent, Config::IniFiles does not have to be installed.
+
+This file must contain the section [HTML::Timeline], after which can follow any number
+of options, as listed above.
+
+The option names in the file do I<not> start with hyphens.
+
+If the same option appears two or more times, the I<last> appearence is used to set the value
+of that option.
+
+The values override the defaults listed above.
+
+These values are, in turn, overridden by the values passed in to the constructor.
+
+This means that command line options passed in to timeline.pl will override the values
+found in $HOME/.timelinerc.
+
+Sample file:
+
+	[HTML::Timeline]
+	output_dir=/var/www/html
 
 =head1 Method: log($message)
 

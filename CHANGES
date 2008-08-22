@@ -1,5 +1,11 @@
 Revision history for Perl extension HTML::Timeline.
 
+1.03  Fri Aug 22 12:23:00 2008
+	- Add support for ~/.timelinerc, using Config::IniFiles
+	- Rename Changes.txt to CHANGES because search.cpan.org won't display Changes.txt
+	- Ensure spouse of root person is included when processing descendents and spouses
+	- Fix date-parsing via Gedcom::Date
+
 1.02  Mon Aug 18 13:50:00 2008
 	- Switch from Date::Manip as used by ged2xml.pl to Gedcom::Date.
 	  Backwards-incompatability, if any, with Date::Manip, is deemed to be a feature
