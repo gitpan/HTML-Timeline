@@ -1,6 +1,6 @@
 ---
 name: HTML-Timeline
-version: 1.03
+version: 1.04
 author:
   - 'Ron Savage <ron@savage.net.au>'
 abstract: Convert a Gedcom file into a Timeline file
@@ -21,7 +21,7 @@ build_requires:
 provides:
   HTML::Timeline:
     file: lib/HTML/Timeline.pm
-    version: 1.03
+    version: 1.04
 generated_by: Module::Build version 0.280801
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
