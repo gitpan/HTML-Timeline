@@ -59,7 +59,7 @@ our @EXPORT = qw(
 
 );
 
-our $VERSION = '1.04';
+our $VERSION = '1.07';
 
 # -----------------------------------------------
 
@@ -646,28 +646,6 @@ Do everything.
 
 See C<examples/timeline.pl> for an example of how to call C<run()>.
 
-=head1 Required Modules
-
-Some of these are only used by C<bin/timeline.pl>.
-
-=over 4
-
-=item accessors
-
-=item Carp
-
-=item Gedcom
-
-=item Gedcom::Date
-
-=item Getopt::Long
-
-=item Path::Class
-
-=item Pod::Usage
-
-=back
-
 =head1 See also
 
 The C<Gedcom> module.
@@ -694,7 +672,7 @@ examples/timeline.xml is the output of this program, using the default options.
 
 =head1 Author
 
-C<HTML::Timeline> was written by Ron Savage in 2008. [ron@savage.net.au]
+C<HTML::Timeline> was written by Ron Savage I<E<lt>ron@savage.net.auE<gt>> in 2008.
 
 Home page: http://savage.net.au/index.html
 

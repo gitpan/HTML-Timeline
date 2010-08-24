@@ -1,12 +1,22 @@
 ---
-name: HTML-Timeline
-version: 1.04
+abstract: 'Convert a Gedcom file into a Timeline file'
 author:
   - 'Ron Savage <ron@savage.net.au>'
-abstract: Convert a Gedcom file into a Timeline file
+build_requires:
+  Test::More: 0
+  Test::Pod: 0
+configure_requires:
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3607'
 license: artistic
-resources:
-  license: http://opensource.org/licenses/artistic-license.php
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: HTML-Timeline
+provides:
+  HTML::Timeline:
+    file: lib/HTML/Timeline.pm
+    version: 1.07
 requires:
   Carp: 0
   Config::IniFiles: 0
@@ -15,14 +25,6 @@ requires:
   HTML::Template: 0
   Path::Class: 0
   accessors: 0
-build_requires:
-  Test::More: 0
-  Test::Pod: 0
-provides:
-  HTML::Timeline:
-    file: lib/HTML/Timeline.pm
-    version: 1.04
-generated_by: Module::Build version 0.280801
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
+resources:
+  license: http://www.perlfoundation.org/artistic_license_1_0
+version: 1.07
